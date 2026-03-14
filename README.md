@@ -57,3 +57,11 @@ cd frontend
 npm install
 
 npm start
+
+add videos - go to ai-service/uploads
+go to http://localhost:5000/
+select play and reload the 
+
+http://localhost:3000/dashboard
+
+
