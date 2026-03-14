@@ -1,0 +1,6 @@
+com\traffic\backend\model\TrafficLog.class
+com\traffic\backend\repository\UserRepository.class
+com\traffic\backend\model\User.class
+com\traffic\backend\controller\TrafficController.class
+com\traffic\backend\BackendApplication.class
+com\traffic\backend\repository\TrafficLogRepository.class

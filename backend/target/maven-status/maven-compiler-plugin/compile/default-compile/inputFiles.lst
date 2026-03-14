@@ -1,0 +1,8 @@
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\BackendApplication.java
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\config\SecurityConfig.java
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\controller\TrafficController.java
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\model\TrafficLog.java
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\model\User.java
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\repository\TrafficLogRepository.java
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\repository\UserRepository.java
+D:\Smart Traffic\SmartTrafficSystem\backend\src\main\java\com\traffic\backend\service\TrafficLogicService.java
