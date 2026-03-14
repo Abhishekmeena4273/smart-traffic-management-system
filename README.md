@@ -21,3 +21,39 @@ This system uses **YOLOv8 computer vision** to detect vehicles in real-time and 
 - 🗑️ **Video Upload Manager** - Upload & switch traffic videos via web UI
 - 🎮 **GPU Acceleration** support (CUDA)
 - 🔒 **User Authentication** ready (Spring Security)
+
+steps to run this 
+
+cd backend
+
+mvn spring-boot:run
+
+
+cd ai-service
+
+python -m venv venv
+
+venv\scripts\activate
+
+pip install -r requirements.txt
+
+python main.py
+
+
+pip install torch torchvision torchaudio (will only use cpu)
+
+for gpu 
+run nvidia-smi
+check the cuda version
+find the cuXXX on  https://download.pytorch.org/whl/  
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuXXX
+
+for me 
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+
+cd frontend
+
+npm install
+
+npm start
