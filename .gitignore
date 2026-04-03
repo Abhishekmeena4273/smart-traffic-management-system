@@ -1,0 +1,39 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database files
+*.mv.db
+*.trace.db
+
+# Logs
+*.log
+logs/
+
+# Uploads
+uploads/
+
+# Build
+build/
+
+# Data (old H2 database)
+data/
+
+# Video files (default videos - can keep for reference, or remove)
+src/main/resources/static/videos/*.mp4

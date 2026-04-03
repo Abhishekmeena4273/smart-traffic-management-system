@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Smart Traffic Management</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="signal-indicator"></div>
+            <span>Smart Traffic Management</span>
+        </div>
+        <div class="nav-links">
+            <a th:href="@{/dashboard}">Dashboard</a>
+            <a th:href="@{/analytics}" class="active">Analytics</a>
+            <span class="user-info" sec:authentication="name">User</span>
+            <form th:action="@{/logout}" method="post" class="logout-form">
+                <button type="submit" class="btn btn-sm btn-outline">Logout</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="analytics-layout">
+        <div class="session-sidebar">
+            <h3>Data Source</h3>
+            <button id="btnLiveData" class="sidebar-item active">
+                <span class="sidebar-icon">&#9679;</span> Live Data
+            </button>
+            <div class="sidebar-divider"></div>
+            <h3>Previous Sessions</h3>
+            <div id="sessionList">
+                <p class="sidebar-empty">No sessions yet</p>
+            </div>
+        </div>
+
+        <div class="container analytics-main">
+            <div class="analytics-header">
+                <h2 id="analyticsTitle">Traffic Analytics</h2>
+                <div class="header-actions">
+                    <button id="btnRefresh" class="btn btn-primary">Refresh Data</button>
+                    <a th:href="@{/api/analytics/export}" class="btn btn-outline" download>Export CSV</a>
+                </div>
+            </div>
+
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-number" id="stat-busiest">-</span>
+                        <span class="stat-label">Busiest Lane</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-number" id="stat-density">0%</span>
+                        <span class="stat-label">Avg Density</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Vehicle Count Over Time</h3>
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Vehicle Type Distribution</h3>
+                    <canvas id="vehicleTypeChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Average Density Per Lane</h3>
+                    <canvas id="densityChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Vehicles Per Lane</h3>
+                    <canvas id="vehiclesLaneChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/analytics.js}"></script>
+</body>
+</html>

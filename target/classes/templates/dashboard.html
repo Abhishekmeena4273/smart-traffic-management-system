@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Traffic Management</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body th:data-processing="${isProcessing}">
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="signal-indicator"></div>
+            <span>Smart Traffic Management</span>
+        </div>
+        <div class="nav-links">
+            <a th:href="@{/dashboard}" class="active">Dashboard</a>
+            <a th:href="@{/analytics}">Analytics</a>
+            <span class="user-info" sec:authentication="name">User</span>
+            <form th:action="@{/logout}" method="post" class="logout-form">
+                <button type="submit" class="btn btn-sm btn-outline">Logout</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- CONTROL BAR -->
+        <div class="control-bar">
+            <div class="control-group">
+                <button id="btnStart" class="btn btn-success" th:styleappend="${isProcessing} ? 'display:none;' : ''">Start Processing</button>
+                <button id="btnStop" class="btn btn-danger" th:styleappend="${isProcessing} ? '' : 'display:none;'">Stop Processing</button>
+                <span id="statusBadge" class="badge" th:classappend="${isProcessing} ? 'badge-success' : 'badge-secondary'"
+                      th:text="${isProcessing} ? 'Running' : 'Stopped'">Stopped</span>
+            </div>
+            <div class="control-group">
+                <label>Manual Override:</label>
+                <select id="manualLane" class="select-override">
+                    <option value="">Select Lane</option>
+                    <option value="1">Lane 1 (North)</option>
+                    <option value="2">Lane 2 (East)</option>
+                    <option value="3">Lane 3 (South)</option>
+                    <option value="4">Lane 4 (West)</option>
+                </select>
+                <button id="btnOverride" class="btn btn-warning">Force Green</button>
+            </div>
+        </div>
+
+        <!-- LANE GRID -->
+        <div class="intersection-view">
+            <div class="lane-grid">
+                <div th:each="lane : ${lanes}" class="lane-card" th:id="'lane-' + ${lane.laneId}">
+                    <div class="lane-header">
+                        <h3>
+                            <span th:if="${lane.laneId == 1}">North (Lane 1)</span>
+                            <span th:if="${lane.laneId == 2}">East (Lane 2)</span>
+                            <span th:if="${lane.laneId == 3}">South (Lane 3)</span>
+                            <span th:if="${lane.laneId == 4}">West (Lane 4)</span>
+                        </h3>
+                        <span class="density-badge">0%</span>
+                    </div>
+
+                    <div class="lane-main">
+                        <div class="video-container">
+                            <video th:src="${lane.videoSource}" muted loop playsinline
+                                   class="lane-video" th:id="'video-' + ${lane.laneId}">
+                            </video>
+                            <canvas class="detection-canvas" th:id="'canvas-' + ${lane.laneId}"></canvas>
+                        </div>
+
+                        <div class="signal-panel">
+                            <div class="signal-lights">
+                                <div class="signal-light red-light"
+                                     th:classappend="${lane.signal.name() == 'RED'} ? 'active' : ''"></div>
+                                <div class="signal-light yellow-light"
+                                     th:classappend="${lane.signal.name() == 'YELLOW'} ? 'active' : ''"></div>
+                                <div class="signal-light green-light"
+                                     th:classappend="${lane.signal.name() == 'GREEN'} ? 'active' : ''"></div>
+                            </div>
+                            <span class="signal-state" th:classappend="'state-' + ${lane.signal.name().toLowerCase()}"
+                                  th:text="${lane.signal}" th:id="'signal-text-' + ${lane.laneId}">RED</span>
+                            <div class="timer-display">
+                                <span class="timer" th:id="'timer-' + ${lane.laneId}"
+                                      th:text="${lane.timerSeconds}">0</span>
+                                <span class="timer-separator">/</span>
+                                <span class="timer-total" th:id="'timer-total-' + ${lane.laneId}"
+                                      th:text="${lane.totalTimerSeconds}">0</span>
+                                <span class="timer-unit">s</span>
+                            </div>
+                            <div class="direction-indicator" th:id="'directions-' + ${lane.laneId}">
+                                <div class="dir-arrow" data-dir="straight" title="Go Straight">
+                                    <span>↑</span>
+                                    <small>Straight</small>
+                                </div>
+                                <div class="dir-arrow" data-dir="left" title="Turn Left">
+                                    <span>←</span>
+                                    <small>Left</small>
+                                </div>
+                                <div class="dir-arrow" data-dir="right" title="Turn Right">
+                                    <span>→</span>
+                                    <small>Right</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lane-stats">
+                        <div class="stat">
+                            <span class="stat-label">Vehicles</span>
+                            <span class="stat-value" th:id="'vehicles-' + ${lane.laneId}">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Density</span>
+                            <span class="stat-value" th:id="'density-' + ${lane.laneId}">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="video-controls">
+                        <input type="file" accept="video/*" class="file-input"
+                               th:id="'file-input-' + ${lane.laneId}" style="display:none">
+                        <button type="button" class="btn btn-sm btn-upload"
+                                th:onclick="'document.getElementById(\'file-input-' + ${lane.laneId} + '\').click()'">
+                            Upload Video
+                        </button>
+                        <div class="video-source-toggle">
+                            <label class="toggle-label">
+                                <input type="checkbox" class="source-toggle"
+                                       th:id="'toggle-' + ${lane.laneId}"
+                                       th:checked="${lane.usingDefault}">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-text" th:text="${lane.usingDefault} ? 'Default' : 'Uploaded'">Default</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <script th:src="@{/js/dashboard.js}"></script>
+</body>
+</html>

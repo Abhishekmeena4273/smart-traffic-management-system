@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Traffic Management - Login</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-header">
+            <div class="traffic-icon">
+                <div class="signal-circle red"></div>
+                <div class="signal-circle yellow"></div>
+                <div class="signal-circle green"></div>
+            </div>
+            <h1>Smart Traffic Management</h1>
+            <p class="subtitle">Urban Congestion Control System</p>
+        </div>
+
+        <form th:action="@{/login}" method="post" class="login-form">
+            <div class="alert alert-error" th:if="${param.error}">
+                Invalid username or password
+            </div>
+            <div class="alert alert-success" th:if="${param.logout}">
+                You have been logged out successfully
+            </div>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+        </form>
+
+        <div class="login-footer">
+            <p>Traffic Police Portal</p>
+        </div>
+    </div>
+</body>
+</html>
