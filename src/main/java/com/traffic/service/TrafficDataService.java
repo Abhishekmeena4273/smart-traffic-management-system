@@ -33,9 +33,13 @@ public class TrafficDataService {
     private DensitySignalService densitySignalService;
 
     public AnalyticsDTO getAnalytics() {
+        Long currentSessionId = densitySignalService.getCurrentSessionId();
+        return buildAnalytics(currentSessionId);
+    }
+
+    private AnalyticsDTO buildAnalytics(Long currentSessionId) {
         AnalyticsDTO dto = new AnalyticsDTO();
 
-        Long currentSessionId = densitySignalService.getCurrentSessionId();
         if (currentSessionId == null) {
             dto.setTotalVehicles(0);
             dto.setDensityPerLane(Map.of(1, 0f, 2, 0f, 3, 0f, 4, 0f));
@@ -44,86 +48,81 @@ public class TrafficDataService {
             dto.setTimeline(new ArrayList<>());
             dto.setVehiclesPerLane(Map.of(1, 0, 2, 0, 3, 0, 4, 0));
             dto.setBusiestLane(1);
+            dto.setSessions(new ArrayList<>());
+            return dto;
+        }
+
+        Integer totalVehicles = trafficRecordRepository.getTotalVehicleCount(currentSessionId);
+        dto.setTotalVehicles(totalVehicles != null ? totalVehicles : 0);
+
+        List<Object[]> aggregates = trafficRecordRepository.getSessionAggregatesByLane(currentSessionId);
+        Map<Integer, Float> peakDensity = new HashMap<>();
+        Map<Integer, Integer> laneMaxVehicles = new HashMap<>();
+
+        for (Object[] row : aggregates) {
+            int lane = ((Number) row[0]).intValue();
+            int maxVehicles = ((Number) row[1]).intValue();
+            double peak = ((Number) row[2]).doubleValue();
+
+            peakDensity.put(lane, (float) peak);
+            laneMaxVehicles.put(lane, maxVehicles);
+        }
+
+        for (int i = 1; i <= 4; i++) {
+            if (!peakDensity.containsKey(i)) {
+                peakDensity.put(i, 0.0f);
+                laneMaxVehicles.put(i, 0);
+            }
+        }
+        dto.setDensityPerLane(peakDensity);
+
+        List<String> vehicleTypes = trafficRecordRepository.getVehicleTypesForSession(currentSessionId);
+        Map<String, Integer> typeDistribution = new HashMap<>();
+        for (String vt : vehicleTypes) {
+            String[] parts = vt.split(",");
+            for (String part : parts) {
+                if (part.contains(":")) {
+                    String type = part.split(":")[0].trim();
+                    try {
+                        int count = Integer.parseInt(part.split(":")[1].trim());
+                        typeDistribution.merge(type, count, Integer::sum);
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+        dto.setVehicleTypeDistribution(typeDistribution);
+
+        int lanesWithData = 0;
+        float totalPeakDensity = 0;
+        for (int i = 1; i <= 4; i++) {
+            if (laneMaxVehicles.getOrDefault(i, 0) > 0) {
+                totalPeakDensity += peakDensity.get(i);
+                lanesWithData++;
+            }
+        }
+        dto.setAverageDensity(lanesWithData > 0 ? totalPeakDensity / lanesWithData : 0.0f);
+
+        List<AnalyticsDTO.TimelinePoint> timeline = buildTimelineFromQuery(currentSessionId);
+        dto.setTimeline(timeline);
+
+        if (!timeline.isEmpty()) {
+            AnalyticsDTO.TimelinePoint latest = timeline.get(timeline.size() - 1);
+            Map<Integer, Integer> latestPerLane = new HashMap<>();
+            latestPerLane.put(1, latest.getLane1Count());
+            latestPerLane.put(2, latest.getLane2Count());
+            latestPerLane.put(3, latest.getLane3Count());
+            latestPerLane.put(4, latest.getLane4Count());
+            dto.setVehiclesPerLane(latestPerLane);
+
+            int busiest = latestPerLane.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse(1);
+            dto.setBusiestLane(busiest);
         } else {
-            Integer totalVehicles = trafficRecordRepository.getTotalVehicleCount(currentSessionId);
-            dto.setTotalVehicles(totalVehicles != null ? totalVehicles : 0);
-
-            List<Object[]> aggregates = trafficRecordRepository.getSessionAggregatesByLane(currentSessionId);
-            Map<Integer, Float> avgDensity = new HashMap<>();
-            Map<Integer, Float> densitySums = new HashMap<>();
-            Map<Integer, Integer> densityCounts = new HashMap<>();
-            Map<Integer, Integer> laneMaxVehicles = new HashMap<>();
-
-            for (Object[] row : aggregates) {
-                int lane = ((Number) row[0]).intValue();
-                int total = ((Number) row[1]).intValue();
-                double avg = ((Number) row[2]).doubleValue();
-                int count = ((Number) row[3]).intValue();
-
-                avgDensity.put(lane, (float) avg);
-                densitySums.put(lane, (float) (avg * count));
-                densityCounts.put(lane, count);
-                laneMaxVehicles.put(lane, total);
-            }
-
-            for (int i = 1; i <= 4; i++) {
-                if (!avgDensity.containsKey(i)) {
-                    avgDensity.put(i, 0.0f);
-                    laneMaxVehicles.put(i, 0);
-                }
-            }
-            dto.setDensityPerLane(avgDensity);
-
-            List<TrafficRecord> records = trafficRecordRepository.findBySessionIdOrderByTimestampAsc(currentSessionId);
-            Map<String, Integer> typeDistribution = new HashMap<>();
-            for (TrafficRecord record : records) {
-                if (record.getVehicleTypes() != null && !record.getVehicleTypes().isEmpty()) {
-                    String[] parts = record.getVehicleTypes().split(",");
-                    for (String part : parts) {
-                        if (part.contains(":")) {
-                            String type = part.split(":")[0].trim();
-                            try {
-                                int count = Integer.parseInt(part.split(":")[1].trim());
-                                typeDistribution.merge(type, count, Integer::sum);
-                            } catch (NumberFormatException ignored) {}
-                        }
-                    }
-                }
-            }
-            dto.setVehicleTypeDistribution(typeDistribution);
-
-            int lanesWithData = 0;
-            float totalAvgDensity = 0;
-            for (int i = 1; i <= 4; i++) {
-                if (densityCounts.getOrDefault(i, 0) > 0) {
-                    totalAvgDensity += avgDensity.get(i);
-                    lanesWithData++;
-                }
-            }
-            dto.setAverageDensity(lanesWithData > 0 ? totalAvgDensity / lanesWithData : 0.0f);
-
-            List<AnalyticsDTO.TimelinePoint> timeline = buildTimelineFromQuery(currentSessionId);
-            dto.setTimeline(timeline);
-
-            if (!timeline.isEmpty()) {
-                AnalyticsDTO.TimelinePoint latest = timeline.get(timeline.size() - 1);
-                Map<Integer, Integer> latestPerLane = new HashMap<>();
-                latestPerLane.put(1, latest.getLane1Count());
-                latestPerLane.put(2, latest.getLane2Count());
-                latestPerLane.put(3, latest.getLane3Count());
-                latestPerLane.put(4, latest.getLane4Count());
-                dto.setVehiclesPerLane(latestPerLane);
-
-                int busiest = latestPerLane.entrySet().stream()
-                        .max(Map.Entry.comparingByValue())
-                        .map(Map.Entry::getKey).orElse(1);
-                dto.setBusiestLane(busiest);
-            } else {
-                dto.setVehiclesPerLane(laneMaxVehicles.isEmpty() ? Map.of(1, 0, 2, 0, 3, 0, 4, 0) : laneMaxVehicles);
-                dto.setBusiestLane(laneMaxVehicles.entrySet().stream()
-                        .max(Map.Entry.comparingByValue())
-                        .map(Map.Entry::getKey).orElse(1));
-            }
+            dto.setVehiclesPerLane(laneMaxVehicles.isEmpty() ? Map.of(1, 0, 2, 0, 3, 0, 4, 0) : laneMaxVehicles);
+            dto.setBusiestLane(laneMaxVehicles.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse(1));
         }
 
         List<ProcessingSession> sessions = processingSessionRepository.findAllByOrderByStartTimeDesc();
@@ -226,56 +225,51 @@ public class TrafficDataService {
         dto.setTotalVehicles(totalVehicles != null ? totalVehicles : 0);
 
         List<Object[]> aggregates = trafficRecordRepository.getSessionAggregatesByLane(sessionId);
-        Map<Integer, Float> avgDensity = new HashMap<>();
-        Map<Integer, Integer> densityCounts = new HashMap<>();
+        Map<Integer, Float> peakDensity = new HashMap<>();
         Map<Integer, Integer> laneMaxVehicles = new HashMap<>();
 
         for (Object[] row : aggregates) {
             int lane = ((Number) row[0]).intValue();
-            int total = ((Number) row[1]).intValue();
-            double avg = ((Number) row[2]).doubleValue();
-            int count = ((Number) row[3]).intValue();
+            int maxVehicles = ((Number) row[1]).intValue();
+            double peak = ((Number) row[2]).doubleValue();
 
-            avgDensity.put(lane, (float) avg);
-            densityCounts.put(lane, count);
-            laneMaxVehicles.put(lane, total);
+            peakDensity.put(lane, (float) peak);
+            laneMaxVehicles.put(lane, maxVehicles);
         }
 
         for (int i = 1; i <= 4; i++) {
-            if (!avgDensity.containsKey(i)) {
-                avgDensity.put(i, 0.0f);
+            if (!peakDensity.containsKey(i)) {
+                peakDensity.put(i, 0.0f);
                 laneMaxVehicles.put(i, 0);
             }
         }
-        dto.setDensityPerLane(avgDensity);
+        dto.setDensityPerLane(peakDensity);
 
-        List<TrafficRecord> records = trafficRecordRepository.findBySessionIdOrderByTimestampAsc(sessionId);
+        List<String> vehicleTypes = trafficRecordRepository.getVehicleTypesForSession(sessionId);
         Map<String, Integer> typeDistribution = new HashMap<>();
-        for (TrafficRecord record : records) {
-            if (record.getVehicleTypes() != null && !record.getVehicleTypes().isEmpty()) {
-                String[] parts = record.getVehicleTypes().split(",");
-                for (String part : parts) {
-                    if (part.contains(":")) {
-                        String type = part.split(":")[0].trim();
-                        try {
-                            int count = Integer.parseInt(part.split(":")[1].trim());
-                            typeDistribution.merge(type, count, Integer::sum);
-                        } catch (NumberFormatException ignored) {}
-                    }
+        for (String vt : vehicleTypes) {
+            String[] parts = vt.split(",");
+            for (String part : parts) {
+                if (part.contains(":")) {
+                    String type = part.split(":")[0].trim();
+                    try {
+                        int count = Integer.parseInt(part.split(":")[1].trim());
+                        typeDistribution.merge(type, count, Integer::sum);
+                    } catch (NumberFormatException ignored) {}
                 }
             }
         }
         dto.setVehicleTypeDistribution(typeDistribution);
 
         int lanesWithData = 0;
-        float totalAvgDensity = 0;
+        float totalPeakDensity = 0;
         for (int i = 1; i <= 4; i++) {
-            if (densityCounts.getOrDefault(i, 0) > 0) {
-                totalAvgDensity += avgDensity.get(i);
+            if (laneMaxVehicles.getOrDefault(i, 0) > 0) {
+                totalPeakDensity += peakDensity.get(i);
                 lanesWithData++;
             }
         }
-        dto.setAverageDensity(lanesWithData > 0 ? totalAvgDensity / lanesWithData : 0.0f);
+        dto.setAverageDensity(lanesWithData > 0 ? totalPeakDensity / lanesWithData : 0.0f);
 
         List<AnalyticsDTO.TimelinePoint> timeline = buildTimelineFromQuery(sessionId);
         dto.setTimeline(timeline);
@@ -336,30 +330,27 @@ public class TrafficDataService {
             int total = records.stream().mapToInt(TrafficRecord::getVehicleCount).sum();
             session.setTotalVehiclesProcessed(total);
 
-            Map<Integer, Integer> laneTotals = new HashMap<>();
-            Map<Integer, Float> laneDensitySums = new HashMap<>();
-            Map<Integer, Integer> laneDensityCounts = new HashMap<>();
+            Map<Integer, Integer> laneMaxVehicles = new HashMap<>();
+            Map<Integer, Float> lanePeakDensity = new HashMap<>();
             for (TrafficRecord r : records) {
-                laneTotals.merge(r.getLaneNumber(), r.getVehicleCount(), Integer::sum);
-                laneDensitySums.merge(r.getLaneNumber(), r.getDensity(), Float::sum);
-                laneDensityCounts.merge(r.getLaneNumber(), 1, Integer::sum);
+                laneMaxVehicles.merge(r.getLaneNumber(), r.getVehicleCount(), Math::max);
+                lanePeakDensity.merge(r.getLaneNumber(), r.getDensity(), Math::max);
             }
 
-            int busiest = laneTotals.entrySet().stream()
+            int busiest = laneMaxVehicles.entrySet().stream()
                     .max(Map.Entry.comparingByValue())
                     .map(Map.Entry::getKey).orElse(1);
             session.setBusiestLane(busiest);
 
-            float avgDensity = 0;
+            float peakDensity = 0;
             int lanes = 0;
             for (int i = 1; i <= 4; i++) {
-                int count = laneDensityCounts.getOrDefault(i, 0);
-                if (count > 0) {
-                    avgDensity += laneDensitySums.get(i) / count;
+                if (lanePeakDensity.containsKey(i)) {
+                    peakDensity += lanePeakDensity.get(i);
                     lanes++;
                 }
             }
-            session.setAverageDensity(lanes > 0 ? avgDensity / lanes : 0.0f);
+            session.setAverageDensity(lanes > 0 ? peakDensity / lanes : 0.0f);
 
             processingSessionRepository.save(session);
         }

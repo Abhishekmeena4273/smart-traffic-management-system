@@ -72,26 +72,10 @@ function connectWebSocket() {
 
 function handleUpdate(payload) {
     var lanes = payload.lanes || [];
-    var serverBoxes = payload.detectionBoxes || {};
 
     lanes.forEach(function (lane) {
         currentLaneData[lane.laneId] = lane;
         updateLaneCard(lane);
-
-        // Draw server-side boxes if we don't have frontend boxes for this lane
-        var boxes = serverBoxes[String(lane.laneId)] || serverBoxes[lane.laneId] || [];
-        if (boxes.length > 0) {
-            lastServerBoxes[lane.laneId] = boxes;
-            if (!laneProcessing[lane.laneId]) {
-                var canvas = document.getElementById('canvas-' + lane.laneId);
-                var vid = document.getElementById('video-' + lane.laneId);
-                if (canvas && vid) {
-                    canvas.width = vid.clientWidth;
-                    canvas.height = vid.clientHeight;
-                    drawBoxes(canvas, boxes, vid);
-                }
-            }
-        }
     });
 }
 

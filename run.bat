@@ -8,7 +8,7 @@ echo   Congestion - Launcher
 echo ============================================
 echo.
 
-echo [1/3] Checking Java...
+echo [1/2] Checking Java...
 java -version >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Java not found. Install JDK 17+ and add to PATH.
@@ -18,35 +18,32 @@ if %errorlevel% neq 0 (
 echo       Java OK
 
 echo.
-echo [2/3] Starting YOLO Detection Service (port 5001)...
-if exist "yolo-service\app.py" (
-    where python >nul 2>&1
-    if %errorlevel% equ 0 (
-        start "YOLO Service" cmd /k "cd yolo-service && pip install -q -r requirements.txt 2>nul && uvicorn app:app --port 5001"
-        echo       YOLO service starting...
-    ) else (
-        echo       Python not found - skipping YOLO (simulation mode)
-    )
-) else (
-    echo       yolo-service not found - simulation mode
+echo [2/2] Building application...
+call mvn clean package -DskipTests -q
+if %errorlevel% neq 0 (
+    echo [ERROR] Build failed. Check the errors above.
+    pause
+    exit /b 1
 )
+echo       Build OK
 
 echo.
-echo [3/3] Starting Spring Boot Application (port 8080)...
-echo       Please wait, first run downloads dependencies...
+echo [3/3] Starting application (port 8080)...
+echo       YOLO detection runs in-process (ONNX Runtime INT8)
+echo       Database: H2 embedded (./data/trafficdb)
 echo.
 
-start "Spring Boot App" cmd /k "mvn spring-boot:run"
+start "Smart Traffic Management" cmd /k "title Smart Traffic App && java -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -jar target\smart-traffic-management-1.0.0.jar"
 
 echo.
 echo ============================================
 echo   Application starting...
 echo.
-echo   Dashboard: http://localhost:8080
-echo   Login:     admin / admin123
+echo   Dashboard:  http://localhost:8080
+echo   Login:      admin / admin123
 echo   H2 Console: http://localhost:8080/h2-console
-echo   YOLO API:  http://localhost:5001/docs
+echo   Health:     http://localhost:8080/api/health
 echo ============================================
 echo.
-echo Press any key to close this window (services keep running)...
+echo Press any key to close this window (app keeps running)...
 pause >nul

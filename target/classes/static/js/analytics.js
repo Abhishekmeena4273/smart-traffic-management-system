@@ -259,21 +259,10 @@ function selectLiveData() {
     document.getElementById('btnLiveData').classList.add('active');
 
     fetchAndRender();
-    startLiveInterval();
-}
-
-function startLiveInterval() {
-    if (liveInterval) clearInterval(liveInterval);
-    liveInterval = setInterval(function () {
-        if (selectedSessionId === null) {
-            fetchAndRender();
-        }
-    }, 10000);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
     fetchAndRender();
-    startLiveInterval();
 
     var btnLiveData = document.getElementById('btnLiveData');
     if (btnLiveData) {

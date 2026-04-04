@@ -22,9 +22,9 @@ public class VideoProcessingService {
     private static final Logger log = LoggerFactory.getLogger(VideoProcessingService.class);
 
     private static final int MIN_INTERVAL_MS = 150;
-    private static final int MAX_INTERVAL_MS = 3000;
+    private static final int MAX_INTERVAL_MS = 500;
     private static final int TARGET_CYCLE_MS = 1000;
-    private static final int FRAME_SKIP = 2;
+    private static final int FRAME_SKIP = 0;
     private static final int MAX_SERVER_BOXES = 100;
     private int frameSkipCounter = 0;
 
@@ -62,7 +62,7 @@ public class VideoProcessingService {
     @Autowired
     private DensitySignalService densitySignalService;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
     private ScheduledFuture<?> signalTask;
     private ScheduledFuture<?> detectionTask;
     private volatile boolean running = false;

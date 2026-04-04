@@ -32,8 +32,5 @@ uploads/
 # Build
 build/
 
-# Data (old H2 database)
+# H2 database
 data/
-
-# Video files (default videos - can keep for reference, or remove)
-src/main/resources/static/videos/*.mp4
