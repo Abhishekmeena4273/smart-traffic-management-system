@@ -1,2 +1,0 @@
--- This file is no longer used.
--- Admin user is created via Java code in CustomUserDetailsService or manually in database.

@@ -1,3 +1,8 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
 # Maven
 target/
 pom.xml.tag
